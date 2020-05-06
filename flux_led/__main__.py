@@ -1204,12 +1204,12 @@ class  BulbScanner():
     def getBulbInfo(self):
         return self.found_bulbs
 
-    def scan(self, timeout=10):
+    def scan(self, timeout=10, bind_ip=''):
 
         DISCOVERY_PORT = 48899
 
         sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        sock.bind(('', DISCOVERY_PORT))
+        sock.bind((bind_ip, DISCOVERY_PORT))
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
         msg = "HF-A11ASSISTHREAD".encode('ascii')
@@ -1577,6 +1577,10 @@ def parseArgs():
     parser.add_option("-S", "--scanresults",
                       action="store_true", dest="scanresults", default=False,
                       help="Operate on scan results instead of arg list")
+    parser.add_option("--scansrcip",
+                      dest="scan_bind_ip", default='',
+                      help="IP address of interface to run scan from (default: '' for any)",
+                      metavar='IP')
     power_group.add_option("-1", "--on",
                       action="store_true", dest="on", default=False,
                       help="Turn on specified bulb(s)")
@@ -1719,7 +1723,7 @@ def main():
 
     if options.scan:
         scanner = BulbScanner()
-        scanner.scan(timeout=2)
+        scanner.scan(timeout=2, bind_ip=options.scan_bind_ip)
         bulb_info_list = scanner.getBulbInfo()
         # we have a list of buld info dicts
         addrs = []
