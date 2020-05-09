@@ -505,6 +505,7 @@ class WifiLedBulb():
         self.protocol = None
         self.rgbwcapable = False
         self.rgbwprotocol = False
+        self.white_only = False
 
         self.raw_state = None
         self._is_on = False
@@ -575,7 +576,9 @@ class WifiLedBulb():
     def _determineMode(self, ww_level, pattern_code):
         mode = "unknown"
         if pattern_code in [ 0x61, 0x62]:
-            if self.rgbwcapable:
+            if self.white_only:
+                mode = "ww"
+            elif self.rgbwcapable:
                 mode = "color"
             elif ww_level != 0:
                 mode = "ww"
@@ -687,6 +690,11 @@ class WifiLedBulb():
         #     msg head
         #
 
+        # Devices that don't support RGB at all,
+        # and have the WW value at byte #6
+        if rx[1] == 0x21:
+            self.white_only = True
+
         # Devices that don't require a separate rgb/w bit
         if (rx[1] == 0x04 or
             rx[1] == 0x33 or
@@ -713,7 +721,12 @@ class WifiLedBulb():
             self._use_csum = False
 
         pattern = rx[3]
-        ww_level = rx[9]
+
+        if self.white_only:
+            ww_level = rx[6]
+        else:
+            ww_level = rx[9]
+
         mode = self._determineMode(ww_level, pattern)
         if mode == "unknown":
             if retry < 1:
@@ -734,7 +747,12 @@ class WifiLedBulb():
         mode = self.mode
 
         pattern = rx[3]
-        ww_level = rx[9]
+
+        if self.white_only:
+            ww_level = rx[6]
+        else:
+            ww_level = rx[9]
+
         power_state = rx[2]
         power_str = "Unknown power state"
 
@@ -930,6 +948,13 @@ class WifiLedBulb():
             msg.append(0xaa)
         else:
             # all other devices
+
+            # this is a bit of hackery for white only device
+            # where the byte that is typically for red is used for the
+            # brightness
+            if self.white_only:
+                r = w
+                w = 0
 
             #assemble the message
             if persist:
